@@ -78,9 +78,9 @@ inline static void xpad360_set_abs_params(struct input_dev *input_dev)
 
 inline static void xpad360_set_capabilities(struct input_dev *input_dev)
 {
-	xpad360_set_keybit(input_dev, xpad360_keybit, sizeof(xpad360_keybit));
-	xpad360_set_absbit(input_dev, xpad360_absbit, sizeof(xpad360_absbit));
-	xpad360_set_ffbit(input_dev, xpad360_ffbit, sizeof(xpad360_ffbit));
+	xpad360_set_keybit(input_dev, xpad360_keybit, sizeof(xpad360_keybit) /  sizeof(xpad360_keybit[0]));
+	xpad360_set_absbit(input_dev, xpad360_absbit, sizeof(xpad360_absbit) / sizeof(xpad360_absbit[0]));
+	xpad360_set_ffbit(input_dev, xpad360_ffbit, sizeof(xpad360_ffbit) / sizeof(xpad360_ffbit[0]));
 }
 
 struct xpad360_transfer {
