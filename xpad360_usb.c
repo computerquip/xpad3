@@ -3,6 +3,8 @@
 #include <linux/slab.h>
 #include <linux/usb/input.h>
 
+#include "xpad360_common.h"
+
 MODULE_AUTHOR("Zachary Lund <admin@computerquip.com>");
 MODULE_DESCRIPTION("Xbox 360 Wired Controller Driver");
 MODULE_LICENSE("GPL");
@@ -31,26 +33,7 @@ static const int xpad360_absbit[] = {
 
 static const int xpad360_ffbit[] = { FF_RUMBLE };
 
-static const int *xpad360_feature_tables[] = {
-	xpad360_keybit,
-	xpad360_absbit,
-	xpad360_ffbit
-};
-
-static const int xpad360_table_sizes[] = {
-	(sizeof(xpad360_keybit) / sizeof(xpad360_keybit[0])),
-	(sizeof(xpad360_absbit) / sizeof(xpad360_absbit[0])),
-	(sizeof(xpad360_ffbit) / sizeof(xpad360_ffbit[0]))
-};
-
-static const int xpad360_feature_constants[] = {
-	EV_KEY,
-	EV_ABS,
-	EV_FF
-};
-
-static const int xpad360_num_features = sizeof(xpad360_feature_constants) / sizeof(xpad360_feature_constants[0]);
-
+/* This array corresponds exactly to xpad360_table. */
 static const char* xpad360_device_names[] = {
 	"Xbox 360 Wired Controller",
 };
@@ -66,6 +49,7 @@ struct xpad360_abs_params {
 	int fuzz; int flat;
 };
 
+/* This array corresponds exactly to xpad360_absbit */
 static const struct xpad360_abs_params xpad360_abs_params[] = {
 	{ -32768, 32768, 16, 128 },
 	{ -32768, 32768, 16, 128 },
@@ -94,14 +78,9 @@ inline static void xpad360_set_abs_params(struct input_dev *input_dev)
 
 inline static void xpad360_set_capabilities(struct input_dev *input_dev)
 {
-	for (int i = 0; i < xpad360_num_features; ++i) {
-		for (int j = 0; j < xpad360_table_sizes[i]; ++j) {
-			const int constant = xpad360_feature_constants[i];
-			const int feature = xpad360_feature_tables[i][j];
-			
-			input_set_capability(input_dev, constant, feature);
-		}
-	}
+	xpad360_set_keybit(input_dev, xpad360_keybit, sizeof(xpad360_keybit));
+	xpad360_set_absbit(input_dev, xpad360_absbit, sizeof(xpad360_absbit));
+	xpad360_set_ffbit(input_dev, xpad360_ffbit, sizeof(xpad360_ffbit));
 }
 
 struct xpad360_transfer {
@@ -182,7 +161,7 @@ static void xpad360_receive(struct urb *urb)
 		xpad360_parse_input(controller->input_dev, &data[2]);
 	}
 	
-	error = usb_submit_urb(urb, GFP_ATOMIC); /* Can't do much if it errors... */
+	error = usb_submit_urb(urb, GFP_ATOMIC);
 	if (error) goto fail;
 	
 	return;
