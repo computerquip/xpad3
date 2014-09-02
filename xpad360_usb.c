@@ -138,6 +138,9 @@ static int xpad360_probe(struct usb_interface *interface, const struct usb_devic
 	}
 	
 	usb_to_input_id(usb_dev, &controller->input_dev->id);
+	
+	controller->input_dev->name = xpad360_device_names[id - xpad360_table];
+	
 	xpad360_set_capabilities(controller->input_dev);
 	xpad360_set_abs_params(controller->input_dev);
 	
