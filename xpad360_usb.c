@@ -115,6 +115,76 @@ struct xpad360_controller {
 	struct input_dev *input_dev;
 };
 
+static inline int xpad360_check_urb(struct urb *urb)
+{	
+	switch (urb->status) { 
+	case 0: 
+		return 0;
+	default: 
+		return 1;
+	}
+}
+
+inline static void xpad360_parse_input(struct input_dev *input_dev, u8 *data)
+{
+	/* D-pad */
+	input_report_abs(input_dev, ABS_HAT0X, !!(data[0] & 0x08) - !!(data[0] & 0x04));
+	input_report_abs(input_dev, ABS_HAT0Y, !!(data[0] & 0x02) - !!(data[0] & 0x01));
+	
+	/* start/back buttons */
+	input_report_key(input_dev, BTN_START,  data[0] & 0x10);
+	input_report_key(input_dev, BTN_SELECT, data[0] & 0x20); /* Back */
+
+	/* stick press left/right */
+	input_report_key(input_dev, BTN_THUMBL, data[0] & 0x40);
+	input_report_key(input_dev, BTN_THUMBR, data[0] & 0x80);
+
+	input_report_key(input_dev, BTN_TL, data[1] & 0x01); /* Left Shoulder */
+	input_report_key(input_dev, BTN_TR, data[1] & 0x02); /* Right Shoulder */
+	input_report_key(input_dev, BTN_MODE, data[1] & 0x04); /* Guide */
+	/* data[8] & 0x08 is a dummy value */
+	input_report_key(input_dev, BTN_A, data[1] & 0x10);
+	input_report_key(input_dev, BTN_B, data[1] & 0x20);
+	input_report_key(input_dev, BTN_X, data[1] & 0x40);
+	input_report_key(input_dev, BTN_Y, data[1] & 0x80);
+
+	input_report_abs(input_dev, ABS_Z, data[2]);
+	input_report_abs(input_dev, ABS_RZ, data[3]);
+
+	/* Left Stick */
+	input_report_abs(input_dev, ABS_X, (__s16)le16_to_cpup((__le16*)&data[4]));
+	input_report_abs(input_dev, ABS_Y, ~(__s16)le16_to_cpup((__le16*)&data[6]));
+
+	/* Right Stick */
+	input_report_abs(input_dev, ABS_RX, (__s16)le16_to_cpup((__le16*)&data[8]));
+	input_report_abs(input_dev, ABS_RY, ~(__s16)le16_to_cpup((__le16*)&data[10]));
+	
+	input_sync(input_dev);
+}
+
+static void xpad360_receive(struct urb *urb)
+{
+	struct xpad360_controller *controller = urb->context;
+	u8 *data = urb->transfer_buffer;
+	int error = 0;
+	
+	error = xpad360_check_urb(urb);
+	if (error) return;
+	
+	switch(le16_to_cpup((u16*)&data[0])) {
+	case 0x0301: /* LED status */
+		break;
+	case 0x0303: /* Possibly a packet concerning rumble effect */
+		break;
+	case 0x0308: /* Attachment */
+		break;
+	case 0x1400:
+		xpad360_parse_input(controller->input_dev, &data[2]);
+	}
+	
+	usb_submit_urb(urb, GFP_KERNEL); /* Can't do much if it errors... */
+}
+
 static int xpad360_probe(struct usb_interface *interface, const struct usb_device_id *id)
 {
 	int error = 0;
@@ -148,10 +218,24 @@ static int xpad360_probe(struct usb_interface *interface, const struct usb_devic
 	if (error)
 		goto fail_input_register;
 	
+	usb_fill_int_urb(
+		controller->in.urb, usb_dev,
+		usb_rcvintpipe(usb_dev, 0x81), /* When is Linux planning to be rid of endpoint pipe integers? They suck. */
+		controller->in.data, 32,
+		xpad360_receive, 
+		controller, 4);
+		
+	error = usb_submit_urb(controller->in.urb, GFP_KERNEL);
+	if (error)
+		goto fail_submit_in;
+	
 	usb_set_intfdata(interface, controller);
 	
 	goto success;
 
+fail_submit_in:
+	input_unregister_device(controller->input_dev);
+	goto fail_input_dev;
 fail_input_register:
 	input_free_device(controller->input_dev);
 fail_input_dev:
