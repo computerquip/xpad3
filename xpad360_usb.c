@@ -185,6 +185,7 @@ static void xpad360_receive(struct urb *urb)
 	error = usb_submit_urb(urb, GFP_ATOMIC); /* Can't do much if it errors... */
 	if (error) goto fail;
 	
+	return;
 fail:
 	usb_free_urb(urb);
 }
