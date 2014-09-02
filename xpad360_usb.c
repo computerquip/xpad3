@@ -169,7 +169,7 @@ static void xpad360_receive(struct urb *urb)
 	int error = 0;
 	
 	error = xpad360_check_urb(urb);
-	if (error) return;
+	if (error) goto fail;
 	
 	switch(le16_to_cpup((u16*)&data[0])) {
 	case 0x0301: /* LED status */
@@ -182,7 +182,11 @@ static void xpad360_receive(struct urb *urb)
 		xpad360_parse_input(controller->input_dev, &data[2]);
 	}
 	
-	usb_submit_urb(urb, GFP_KERNEL); /* Can't do much if it errors... */
+	error = usb_submit_urb(urb, GFP_KERNEL); /* Can't do much if it errors... */
+	if (error) goto fail;
+	
+fail:
+	usb_free_urb(urb);
 }
 
 static int xpad360_probe(struct usb_interface *interface, const struct usb_device_id *id)
@@ -251,7 +255,6 @@ static void xpad360_disconnect(struct usb_interface *interface)
 	struct xpad360_controller *controller = usb_get_intfdata(interface);
 	
 	input_unregister_device(controller->input_dev);
-	usb_free_urb(controller->in.urb);
 	kfree(controller);
 }
 
