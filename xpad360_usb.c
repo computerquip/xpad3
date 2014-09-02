@@ -182,7 +182,7 @@ static void xpad360_receive(struct urb *urb)
 		xpad360_parse_input(controller->input_dev, &data[2]);
 	}
 	
-	error = usb_submit_urb(urb, GFP_KERNEL); /* Can't do much if it errors... */
+	error = usb_submit_urb(urb, GFP_ATOMIC); /* Can't do much if it errors... */
 	if (error) goto fail;
 	
 fail:
