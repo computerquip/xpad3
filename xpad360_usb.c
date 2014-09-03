@@ -89,9 +89,9 @@ struct xpad360_controller {
 	struct input_dev *input_dev;
 };
 
-static int xpad360_rumble(struct input_dev *dev, void* stuff, struct ff_effect *effect)
+static int xpad360_rumble(struct input_dev *dev, void* context, struct ff_effect *effect)
 {
-	struct xpad360_controller *controller = stuff;
+	struct xpad360_controller *controller = context;
 	int status = -1;
 
 	if (effect->type == FF_RUMBLE) {
@@ -245,14 +245,14 @@ static int xpad360_probe(struct usb_interface *interface, const struct usb_devic
 		controller->led_out.buffer = NULL;
 	}
 	
-	error = xpad360_alloc_transfer(usb_dev, &controller->led_out, GFP_KERNEL);
+	error = xpad360_alloc_transfer(usb_dev, &controller->rumble_out, GFP_KERNEL);
 	if (error)
 		goto required;
 	
 	usb_fill_int_urb(
 		controller->rumble_out.urb, usb_dev,
 		usb_sndintpipe(usb_dev, 0x01),
-		controller->led_out.buffer, 32,
+		controller->rumble_out.buffer, 32,
 		xpad360_send, controller, 8);
 	
 	controller->rumble_out.urb->transfer_buffer_length = 8;
