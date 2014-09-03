@@ -85,9 +85,18 @@ inline static void xpad360_set_capabilities(struct input_dev *input_dev)
 
 struct xpad360_controller {
 	struct xpad360_transfer in;
-	struct xpad360_transfer out;
+	struct xpad360_transfer led_out;
 	struct input_dev *input_dev;
 };
+
+inline
+static void xpad360_gen_packet_led(u8 *buffer, enum xpad360_led led)
+{
+	const u8 packet[3] = { 0x01, 0x03, led };
+	
+	memset(&buffer[3], 0, 29);
+	memcpy(buffer, packet, sizeof(packet));
+}
 
 inline static void xpad360_parse_input(struct input_dev *input_dev, u8 *data)
 {
@@ -126,13 +135,17 @@ inline static void xpad360_parse_input(struct input_dev *input_dev, u8 *data)
 	input_sync(input_dev);
 }
 
+static void xpad360_send(struct urb *urb)
+{
+	/* We can't handle urb->status reasonably so just don't.  */
+}
+
 static void xpad360_receive(struct urb *urb)
 {
 	struct xpad360_controller *controller = urb->context;
 	u8 *data = urb->transfer_buffer;
-	int error = 0;
 	
-	switch (status) {
+	switch (urb->status) {
 	case 0: 
 		break;
 	case -ECONNRESET:
@@ -192,7 +205,7 @@ static int xpad360_probe(struct usb_interface *interface, const struct usb_devic
 	
 	usb_fill_int_urb(
 		controller->in.urb, usb_dev,
-		usb_rcvintpipe(usb_dev, 0x81), /* When is Linux planning to be rid of endpoint pipe integers? They suck. */
+		usb_rcvintpipe(usb_dev, 0x81),
 		controller->in.buffer, 32,
 		xpad360_receive, 
 		controller, 4);
@@ -202,6 +215,25 @@ static int xpad360_probe(struct usb_interface *interface, const struct usb_devic
 		goto fail_submit_in;
 	
 	usb_set_intfdata(interface, controller);
+	
+	/* It's not essential that the following succeeds. */
+	error = xpad360_alloc_transfer(usb_dev, &controller->led_out, GFP_KERNEL);
+	if (error) 
+		goto success;
+	
+	xpad360_gen_packet_led(controller->led_out.buffer, XPAD360_LED_ON_1);
+	
+	usb_fill_int_urb(
+		controller->led_out.urb, usb_dev,
+		usb_rcvintpipe(usb_dev, 0x01),
+		controller->led_out.buffer, 32,
+		xpad360_send, 
+		controller, 8);
+	
+	error = usb_submit_urb(controller->led_out.urb, GFP_KERNEL);
+	if (error) {
+		xpad360_free_transfer(usb_dev, &controller->led_out);
+	}
 	
 	goto success;
 
