@@ -225,14 +225,18 @@ static int xpad360_probe(struct usb_interface *interface, const struct usb_devic
 	
 	usb_fill_int_urb(
 		controller->led_out.urb, usb_dev,
-		usb_rcvintpipe(usb_dev, 0x01),
+		usb_sndintpipe(usb_dev, 0x01),
 		controller->led_out.buffer, 32,
 		xpad360_send, 
 		controller, 8);
 	
+	controller->led_out.urb->transfer_buffer_length = 3;
+	
 	error = usb_submit_urb(controller->led_out.urb, GFP_KERNEL);
 	if (error) {
 		xpad360_free_transfer(usb_dev, &controller->led_out);
+		controller->led_out.urb = NULL;
+		controller->led_out.buffer = NULL;
 	}
 	
 	goto success;
@@ -256,6 +260,7 @@ static void xpad360_disconnect(struct usb_interface *interface)
 	struct xpad360_controller *controller = usb_get_intfdata(interface);
 	
 	xpad360_free_transfer(usb_dev, &controller->in);
+	xpad360_free_transfer(usb_dev, &controller->led_out);
 	input_unregister_device(controller->input_dev);
 	kfree(controller);
 }
