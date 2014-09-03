@@ -44,13 +44,11 @@ static void xpad360_set_keybit(struct input_dev *input_dev, const int *types, si
 }
 
 inline 
-static void xpad360_set_ffbit(struct input_dev *input_dev, const int *types, size_t size)
+static void xpad360_set_ffbit(struct input_dev *input_dev)
 {
+	/* Xbox controllers only support basic rumble effect. */
 	__set_bit(EV_FF, input_dev->evbit);
-	
-	for (int i = 0; i < size; ++i) {
-		__set_bit(types[i], input_dev->ffbit);
-	}
+	__set_bit(FF_RUMBLE, input_dev->ffbit);
 }
 
 inline 

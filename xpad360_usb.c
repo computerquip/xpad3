@@ -78,16 +78,39 @@ inline static void xpad360_set_abs_params(struct input_dev *input_dev)
 
 inline static void xpad360_set_capabilities(struct input_dev *input_dev)
 {
-	xpad360_set_keybit(input_dev, xpad360_keybit, sizeof(xpad360_keybit) /  sizeof(xpad360_keybit[0]));
-	xpad360_set_absbit(input_dev, xpad360_absbit, sizeof(xpad360_absbit) / sizeof(xpad360_absbit[0]));
-	xpad360_set_ffbit(input_dev, xpad360_ffbit, sizeof(xpad360_ffbit) / sizeof(xpad360_ffbit[0]));
+
+	
 }
 
 struct xpad360_controller {
 	struct xpad360_transfer in;
 	struct xpad360_transfer led_out;
+	struct xpad360_transfer rumble_out;
 	struct input_dev *input_dev;
 };
+
+static int xpad360_rumble(struct input_dev *dev, void* stuff, struct ff_effect *effect)
+{
+	struct xpad360_controller *controller = stuff;
+	int status = -1;
+
+	if (effect->type == FF_RUMBLE) {
+		u8 left = effect->u.rumble.strong_magnitude / 255;
+		u8 rite = effect->u.rumble.weak_magnitude / 255;
+		
+		const u8 packet[8] = { 
+			0x00, 0x08, 0x00, 
+			left, rite,
+			0x00, 0x00, 0x00 
+		};
+
+		memcpy(controller->rumble_out.urb->transfer_buffer, packet, sizeof(packet));
+
+		status = !!usb_submit_urb(controller->rumble_out.urb, GFP_ATOMIC);
+	}
+	
+	return status;
+}
 
 inline
 static void xpad360_gen_packet_led(u8 *buffer, enum xpad360_led led)
@@ -186,40 +209,24 @@ static int xpad360_probe(struct usb_interface *interface, const struct usb_devic
 		goto fail_alloc_in;
 	}
 	
-	controller->input_dev = input_allocate_device();
-	if (!controller->input_dev) {
-		error = -ENOMEM;
-		goto fail_input_dev;
-	}
-	
-	usb_to_input_id(usb_dev, &controller->input_dev->id);
-	
-	controller->input_dev->name = xpad360_device_names[id - xpad360_table];
-	
-	xpad360_set_capabilities(controller->input_dev);
-	xpad360_set_abs_params(controller->input_dev);
-	
-	error = input_register_device(controller->input_dev);
-	if (error)
-		goto fail_input_register;
-	
 	usb_fill_int_urb(
 		controller->in.urb, usb_dev,
 		usb_rcvintpipe(usb_dev, 0x81),
 		controller->in.buffer, 32,
 		xpad360_receive, 
 		controller, 4);
-		
-	error = usb_submit_urb(controller->in.urb, GFP_KERNEL);
-	if (error)
-		goto fail_submit_in;
 	
-	usb_set_intfdata(interface, controller);
+	controller->input_dev = input_allocate_device();
+	if (!controller->input_dev) {
+		error = -ENOMEM;
+		goto fail_input_dev;
+	}
 	
-	/* It's not essential that the following succeeds. */
+	/* The LED and Rumble features don't have to succeed in setup for a usable controller.
+	 * I treat both of them as optional */
 	error = xpad360_alloc_transfer(usb_dev, &controller->led_out, GFP_KERNEL);
 	if (error) 
-		goto success;
+		goto required;
 	
 	xpad360_gen_packet_led(controller->led_out.buffer, XPAD360_LED_ON_1);
 	
@@ -227,8 +234,7 @@ static int xpad360_probe(struct usb_interface *interface, const struct usb_devic
 		controller->led_out.urb, usb_dev,
 		usb_sndintpipe(usb_dev, 0x01),
 		controller->led_out.buffer, 32,
-		xpad360_send, 
-		controller, 8);
+		xpad360_send, controller, 8);
 	
 	controller->led_out.urb->transfer_buffer_length = 3;
 	
@@ -238,6 +244,41 @@ static int xpad360_probe(struct usb_interface *interface, const struct usb_devic
 		controller->led_out.urb = NULL;
 		controller->led_out.buffer = NULL;
 	}
+	
+	error = xpad360_alloc_transfer(usb_dev, &controller->led_out, GFP_KERNEL);
+	if (error)
+		goto required;
+	
+	usb_fill_int_urb(
+		controller->rumble_out.urb, usb_dev,
+		usb_sndintpipe(usb_dev, 0x01),
+		controller->led_out.buffer, 32,
+		xpad360_send, controller, 8);
+	
+	controller->rumble_out.urb->transfer_buffer_length = 8;
+	
+required:
+	usb_to_input_id(usb_dev, &controller->input_dev->id);
+	
+	controller->input_dev->name = xpad360_device_names[id - xpad360_table];
+	
+	xpad360_set_keybit(controller->input_dev, xpad360_keybit, sizeof(xpad360_keybit) /  sizeof(xpad360_keybit[0]));
+	xpad360_set_absbit(controller->input_dev, xpad360_absbit, sizeof(xpad360_absbit) / sizeof(xpad360_absbit[0]));
+	xpad360_set_abs_params(controller->input_dev);
+	
+	error = input_ff_create_memless(controller->input_dev, controller, xpad360_rumble);
+	if (!error) /* If successful. */
+		xpad360_set_ffbit(controller->input_dev);
+
+	error = input_register_device(controller->input_dev);
+	if (error)
+		goto fail_input_register;
+	
+	error = usb_submit_urb(controller->in.urb, GFP_KERNEL);
+	if (error)
+		goto fail_submit_in;
+	
+	usb_set_intfdata(interface, controller);
 	
 	goto success;
 
@@ -260,6 +301,7 @@ static void xpad360_disconnect(struct usb_interface *interface)
 	struct xpad360_controller *controller = usb_get_intfdata(interface);
 	
 	xpad360_free_transfer(usb_dev, &controller->in);
+	xpad360_free_transfer(usb_dev, &controller->rumble_out);
 	xpad360_free_transfer(usb_dev, &controller->led_out);
 	input_unregister_device(controller->input_dev);
 	kfree(controller);
