@@ -1,6 +1,6 @@
 #pragma once
 
-enum xpad360_led{
+enum xpad360_led {
 	XPAD360_LED_OFF,
 	XPAD360_LED_ALL_BLINKING,
 	XPAD360_LED_FLASH_ON_1,
