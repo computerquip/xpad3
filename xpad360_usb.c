@@ -89,16 +89,6 @@ struct xpad360_controller {
 	struct input_dev *input_dev;
 };
 
-static inline int xpad360_check_urb(struct urb *urb)
-{	
-	switch (urb->status) { 
-	case 0: 
-		return 0;
-	default: 
-		return 1;
-	}
-}
-
 inline static void xpad360_parse_input(struct input_dev *input_dev, u8 *data)
 {
 	/* D-pad */
@@ -142,8 +132,16 @@ static void xpad360_receive(struct urb *urb)
 	u8 *data = urb->transfer_buffer;
 	int error = 0;
 	
-	error = xpad360_check_urb(urb);
-	if (error) goto finish;
+	switch (status) {
+	case 0: 
+		break;
+	case -ECONNRESET:
+	case -ENOENT:
+	case -ESHUTDOWN:
+		return;
+	default:
+		goto finish;
+	}
 	
 	switch(le16_to_cpup((u16*)&data[0])) {
 	case 0x0301: /* LED status */
