@@ -83,11 +83,6 @@ inline static void xpad360_set_capabilities(struct input_dev *input_dev)
 	xpad360_set_ffbit(input_dev, xpad360_ffbit, sizeof(xpad360_ffbit) / sizeof(xpad360_ffbit[0]));
 }
 
-struct xpad360_transfer {
-	struct urb *urb;
-	unsigned char data[32];
-};
-
 struct xpad360_controller {
 	struct xpad360_transfer in;
 	struct xpad360_transfer out;
@@ -148,7 +143,7 @@ static void xpad360_receive(struct urb *urb)
 	int error = 0;
 	
 	error = xpad360_check_urb(urb);
-	if (error) goto fail;
+	if (error) goto finish;
 	
 	switch(le16_to_cpup((u16*)&data[0])) {
 	case 0x0301: /* LED status */
@@ -161,12 +156,8 @@ static void xpad360_receive(struct urb *urb)
 		xpad360_parse_input(controller->input_dev, &data[2]);
 	}
 	
-	error = usb_submit_urb(urb, GFP_ATOMIC);
-	if (error) goto fail;
-	
-	return;
-fail:
-	usb_free_urb(urb);
+finish:
+	usb_submit_urb(urb, GFP_ATOMIC);
 }
 
 static int xpad360_probe(struct usb_interface *interface, const struct usb_device_id *id)
@@ -179,9 +170,8 @@ static int xpad360_probe(struct usb_interface *interface, const struct usb_devic
 	if (!controller)
 		return -ENOMEM;
 	
-	controller->in.urb = usb_alloc_urb(0, GFP_KERNEL);
-	if (!controller->in.urb) {
-		error = -ENOMEM;
+	error = xpad360_alloc_transfer(usb_dev, &controller->in, GFP_KERNEL);
+	if (error) {
 		goto fail_alloc_in;
 	}
 	
@@ -205,7 +195,7 @@ static int xpad360_probe(struct usb_interface *interface, const struct usb_devic
 	usb_fill_int_urb(
 		controller->in.urb, usb_dev,
 		usb_rcvintpipe(usb_dev, 0x81), /* When is Linux planning to be rid of endpoint pipe integers? They suck. */
-		controller->in.data, 32,
+		controller->in.buffer, 32,
 		xpad360_receive, 
 		controller, 4);
 		
@@ -223,7 +213,7 @@ fail_submit_in:
 fail_input_register:
 	input_free_device(controller->input_dev);
 fail_input_dev:
-	usb_free_urb(controller->in.urb);
+	xpad360_free_transfer(usb_dev, &controller->in);
 fail_alloc_in:
 	kfree(controller);
 success:
@@ -232,8 +222,10 @@ success:
 
 static void xpad360_disconnect(struct usb_interface *interface)
 {
+	struct usb_device *usb_dev = interface_to_usbdev(interface);
 	struct xpad360_controller *controller = usb_get_intfdata(interface);
 	
+	xpad360_free_transfer(usb_dev, &controller->in);
 	input_unregister_device(controller->input_dev);
 	kfree(controller);
 }
