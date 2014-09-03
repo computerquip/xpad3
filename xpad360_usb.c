@@ -76,12 +76,6 @@ inline static void xpad360_set_abs_params(struct input_dev *input_dev)
 	}
 }
 
-inline static void xpad360_set_capabilities(struct input_dev *input_dev)
-{
-
-	
-}
-
 struct xpad360_controller {
 	struct xpad360_transfer in;
 	struct xpad360_transfer led_out;
@@ -226,7 +220,7 @@ static int xpad360_probe(struct usb_interface *interface, const struct usb_devic
 	 * I treat both of them as optional */
 	error = xpad360_alloc_transfer(usb_dev, &controller->led_out, GFP_KERNEL);
 	if (error) 
-		goto required;
+		goto finish_led;
 	
 	xpad360_gen_packet_led(controller->led_out.buffer, XPAD360_LED_ON_1);
 	
@@ -239,14 +233,18 @@ static int xpad360_probe(struct usb_interface *interface, const struct usb_devic
 	controller->led_out.urb->transfer_buffer_length = 3;
 	
 	error = usb_submit_urb(controller->led_out.urb, GFP_KERNEL);
-	if (error) {
-		xpad360_free_transfer(usb_dev, &controller->led_out);
-		controller->led_out.urb = NULL;
-		controller->led_out.buffer = NULL;
-	}
+	if (!error) /* If successful. */
+		goto finish_led;
 	
+	xpad360_free_transfer(usb_dev, &controller->led_out);
+	controller->led_out.urb = NULL;
+	controller->led_out.buffer = NULL;
+	
+finish_led:
 	error = xpad360_alloc_transfer(usb_dev, &controller->rumble_out, GFP_KERNEL);
 	if (error)
+		controller->rumble_out.urb = NULL;
+		controller->rumble_out.buffer = NULL;
 		goto required;
 	
 	usb_fill_int_urb(
