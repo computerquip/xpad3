@@ -111,7 +111,6 @@ static void xpad360_gen_packet_led(u8 *buffer, enum xpad360_led led)
 {
 	const u8 packet[3] = { 0x01, 0x03, led };
 	
-	memset(&buffer[3], 0, 29);
 	memcpy(buffer, packet, sizeof(packet));
 }
 
@@ -310,7 +309,7 @@ static struct usb_driver xpad360_driver = {
 	.probe		= xpad360_probe,
 	.disconnect	= xpad360_disconnect,
 	.id_table	= xpad360_table,
-	.soft_unbind	= 1 /* Allows us to set LED properly before module unload. */
+	/* .soft_unbind	= 1 *//* Allows us to set LED properly before module unload. */
 };
 
 MODULE_DEVICE_TABLE(usb, xpad360_table);
