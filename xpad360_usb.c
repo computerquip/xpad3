@@ -144,6 +144,15 @@ inline static void xpad360_parse_input(struct input_dev *input_dev, u8 *data)
 	input_sync(input_dev);
 }
 
+static int xpad360_open(struct input_dev *dev)
+{
+	return 0;
+}
+
+static void xpad360_close(struct input_dev *dev)
+{
+}
+
 static void xpad360_send(struct urb *urb)
 {
 	/* We can't handle urb->status reasonably so just don't.  */
@@ -240,6 +249,8 @@ static int xpad360_init_input_dev(struct usb_device *usb_dev, struct xpad360_con
 	usb_to_input_id(usb_dev, &controller->input_dev->id);
 	
 	controller->input_dev->name = name;
+	controller->input_dev->open = xpad360_open;
+	controller->input_dev->close = xpad360_close;
 	
 	xpad360_set_keybit(controller->input_dev, xpad360_keybit, sizeof(xpad360_keybit) /  sizeof(xpad360_keybit[0]));
 	xpad360_set_absbit(controller->input_dev, xpad360_absbit, sizeof(xpad360_absbit) / sizeof(xpad360_absbit[0]));
