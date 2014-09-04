@@ -25,8 +25,6 @@ static const int xpad360_absbit[] = {
 	ABS_HAT0X, ABS_HAT0Y
 };
 
-static const int xpad360_ffbit[] = { FF_RUMBLE };
-
 /* This array corresponds exactly to xpad360_table. */
 static const char* xpad360_device_names[] = {
 	"Xbox 360 Wired Controller",
