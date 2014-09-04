@@ -172,6 +172,8 @@ static void xpad360_receive(struct urb *urb)
 		goto finish;
 	}
 	
+	printk("Parsing message!");
+	
 	switch(le16_to_cpup((u16*)&data[0])) {
 	case 0x0301: /* LED status */
 		break;
@@ -265,6 +267,7 @@ static int xpad360_init_input_dev(struct usb_device *usb_dev, struct xpad360_con
 inline
 static int xpad360_init_ff(struct usb_device *usb_dev, struct xpad360_controller *controller)
 {
+	/* Kernel doesn't check urb for null. So just submit a valid URB. TODO */
 	int error = xpad360_alloc_transfer(usb_dev, &controller->rumble_out, GFP_KERNEL);
 	if (error)
 		return error;
@@ -283,13 +286,9 @@ static int xpad360_init_ff(struct usb_device *usb_dev, struct xpad360_controller
 		xpad360_free_transfer(usb_dev, &controller->rumble_out);
 		return error;
 	}
-	
-	return error;
-#else
-	controller->rumble_out.buffer = 0;
-	controller->rumble_out.dma = 0;
-	return 0;
 #endif
+
+	return error;
 }
 
 static int xpad360_probe(struct usb_interface *interface, const struct usb_device_id *id)
