@@ -244,6 +244,7 @@ static int xpad360_init_input_dev(struct usb_device *usb_dev, struct xpad360_con
 	xpad360_set_keybit(controller->input_dev, xpad360_keybit, sizeof(xpad360_keybit) /  sizeof(xpad360_keybit[0]));
 	xpad360_set_absbit(controller->input_dev, xpad360_absbit, sizeof(xpad360_absbit) / sizeof(xpad360_absbit[0]));
 	xpad360_set_abs_params(controller->input_dev);
+	xpad360_set_ffbit(controller->input_dev);
 	
 	return 0;
 }
@@ -269,8 +270,6 @@ static int xpad360_init_ff(struct usb_device *usb_dev, struct xpad360_controller
 		xpad360_free_transfer(usb_dev, &controller->rumble_out);
 		return error;
 	}
-		
-	xpad360_set_ffbit(controller->input_dev);
 	
 	return error;
 #else
@@ -281,7 +280,7 @@ static int xpad360_init_ff(struct usb_device *usb_dev, struct xpad360_controller
 }
 
 static int xpad360_probe(struct usb_interface *interface, const struct usb_device_id *id)
-{
+{	
 	int error = 0;
 	struct usb_device *usb_dev = interface_to_usbdev(interface);
 	struct xpad360_controller *controller = 
@@ -298,13 +297,13 @@ static int xpad360_probe(struct usb_interface *interface, const struct usb_devic
 	if (error)
 		goto fail_input_init;
 	
-	error = xpad360_init_ff(usb_dev, controller);
-	if (error)
-		goto fail_ff_init;
-	
 	error = input_register_device(controller->input_dev);
 	if (error)
 		goto fail_input_register;
+	
+	error = xpad360_init_ff(usb_dev, controller);
+	if (error)
+		goto fail_ff_init;
 	
 	error = xpad360_init_in(usb_dev, controller);
 	if (error)
@@ -315,10 +314,10 @@ static int xpad360_probe(struct usb_interface *interface, const struct usb_devic
 	goto success;
 
 fail_in_init:
-	input_unregister_device(controller->input_dev);
-fail_input_register:
 	xpad360_free_transfer(usb_dev, &controller->rumble_out);
 fail_ff_init:
+	input_unregister_device(controller->input_dev);
+fail_input_register:
 	input_free_device(controller->input_dev);
 fail_input_init:
 	xpad360_free_transfer(usb_dev, &controller->led_out);
