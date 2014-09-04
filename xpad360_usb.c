@@ -9,7 +9,7 @@ MODULE_AUTHOR("Zachary Lund <admin@computerquip.com>");
 MODULE_DESCRIPTION("Xbox 360 Wired Controller Driver");
 MODULE_LICENSE("GPL");
 
-#define XPAD360_RUMBLE_DISABLED
+#define XPAD360_LED_DISABLED
 
 static const int xpad360_keybit[] = {
 	BTN_A, BTN_B, BTN_X, BTN_Y,
