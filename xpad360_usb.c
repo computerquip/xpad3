@@ -86,7 +86,6 @@ struct xpad360_controller {
 static int xpad360_rumble(struct input_dev *dev, void* context, struct ff_effect *effect)
 {
 	struct xpad360_controller *controller = context;
-	int status = -1;
 
 	if (effect->type == FF_RUMBLE) {
 		u8 left = effect->u.rumble.strong_magnitude / 255;
@@ -97,13 +96,11 @@ static int xpad360_rumble(struct input_dev *dev, void* context, struct ff_effect
 			left, rite,
 			0x00, 0x00, 0x00 
 		};
-
+		
 		memcpy(controller->rumble_out.urb->transfer_buffer, packet, sizeof(packet));
-
-		status = !!usb_submit_urb(controller->rumble_out.urb, GFP_ATOMIC);
 	}
 	
-	return status;
+	return usb_submit_urb(controller->rumble_out.urb, GFP_ATOMIC);;
 }
 
 inline
