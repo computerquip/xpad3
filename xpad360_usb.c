@@ -201,6 +201,10 @@ static int xpad360_init_in(struct usb_device *usb_dev, struct xpad360_controller
 		controller->in.buffer, 32,
 		xpad360_receive, 
 		controller, 4);
+	
+	error = usb_submit_urb(controller->in.urb, GFP_KERNEL);
+	if (error)
+		xpad360_free_transfer(usb_dev, &controller->in);
 
 	return error;
 }
@@ -222,10 +226,8 @@ static int xpad360_init_led(struct usb_device *usb_dev, struct xpad360_controlle
 		xpad360_send, controller, 8);
 	
 	error = usb_submit_urb(controller->led_out.urb, GFP_KERNEL);
-	if (error) {
+	if (error)
 		xpad360_free_transfer(usb_dev, &controller->led_out);
-		return error;
-	}
 	
 	return error;
 #else
