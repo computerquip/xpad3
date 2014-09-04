@@ -253,7 +253,9 @@ static int xpad360_init_input_dev(struct usb_device *usb_dev, struct xpad360_con
 	xpad360_set_keybit(controller->input_dev, xpad360_keybit, sizeof(xpad360_keybit) /  sizeof(xpad360_keybit[0]));
 	xpad360_set_absbit(controller->input_dev, xpad360_absbit, sizeof(xpad360_absbit) / sizeof(xpad360_absbit[0]));
 	xpad360_set_abs_params(controller->input_dev);
+#ifndef XPAD360_RUMBLE_DISABLED
 	xpad360_set_ffbit(controller->input_dev);
+#endif
 	
 	return 0;
 }
