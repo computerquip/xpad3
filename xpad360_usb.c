@@ -188,19 +188,22 @@ finish:
 }
 
 inline
-static int xpad360_init_in(struct usb_device *usb_dev, struct xpad360_controller *controller)
+static int xpad360_init_in(struct usb_interface *usb_intf, struct xpad360_controller *controller)
 {
+	struct usb_device *usb_dev = interface_to_usbdev(usb_intf);
+	struct usb_endpoint_descriptor *ep_in = &usb_intf->cur_altsetting->endpoint[0].desc;
 	int error = xpad360_alloc_transfer(usb_dev, &controller->in, GFP_KERNEL);
+	
 	if (error) {
 		return error;
 	}
 	
 	usb_fill_int_urb(
 		controller->in.urb, usb_dev,
-		usb_rcvintpipe(usb_dev, 0x81),
+		usb_rcvintpipe(usb_dev, ep_in->bEndpointAddress),
 		controller->in.buffer, 32,
 		xpad360_receive, 
-		controller, 4);
+		controller, ep_in->bInterval);
 	
 	error = usb_submit_urb(controller->in.urb, GFP_KERNEL);
 	if (error)
@@ -210,9 +213,12 @@ static int xpad360_init_in(struct usb_device *usb_dev, struct xpad360_controller
 }
 
 inline
-static int xpad360_init_led(struct usb_device *usb_dev, struct xpad360_controller *controller)
+static int xpad360_init_led(struct usb_interface *usb_intf, struct xpad360_controller *controller)
 {
+	struct usb_device *usb_dev = interface_to_usbdev(usb_intf);
+	struct usb_endpoint_descriptor *ep_out = &usb_intf->cur_altsetting->endpoint[1].desc;
 	int error = xpad360_alloc_transfer(usb_dev, &controller->led_out, GFP_KERNEL);
+	
 	if (error) 
 		return error;
 	
@@ -221,9 +227,11 @@ static int xpad360_init_led(struct usb_device *usb_dev, struct xpad360_controlle
 	
 	usb_fill_int_urb(
 		controller->led_out.urb, usb_dev,
-		usb_sndintpipe(usb_dev, 0x01),
+		usb_sndintpipe(usb_dev, ep_out->bEndpointAddress),
 		controller->led_out.buffer, 32,
-		xpad360_send, controller, 8);
+		xpad360_send, controller, ep_out->bInterval);
+	
+	controller->led_out.urb->transfer_buffer_length = 3;
 	
 	error = usb_submit_urb(controller->led_out.urb, GFP_KERNEL);
 	if (error)
@@ -263,19 +271,22 @@ static int xpad360_init_input_dev(struct usb_device *usb_dev, struct xpad360_con
 }
 
 inline
-static int xpad360_init_ff(struct usb_device *usb_dev, struct xpad360_controller *controller)
+static int xpad360_init_ff(struct usb_interface *usb_intf, struct xpad360_controller *controller)
 {
 	/* Kernel doesn't check urb for null. So just submit a valid URB. TODO */
+	struct usb_device *usb_dev = interface_to_usbdev(usb_intf);
+	struct usb_endpoint_descriptor *ep_out = &usb_intf->cur_altsetting->endpoint[1].desc;
 	int error = xpad360_alloc_transfer(usb_dev, &controller->rumble_out, GFP_KERNEL);
+	
 	if (error)
 		return error;
 
 #ifndef XPAD360_RUMBLE_DISABLED
 	usb_fill_int_urb(
 		controller->rumble_out.urb, usb_dev,
-		usb_sndintpipe(usb_dev, 0x01),
+		usb_sndintpipe(usb_dev, ep_out->bEndpointAddress),
 		controller->rumble_out.buffer, 32,
-		xpad360_send, controller, 8);
+		xpad360_send, controller, ep_out->bInterval);
 	
 	controller->rumble_out.urb->transfer_buffer_length = 8;
 	
@@ -299,7 +310,7 @@ static int xpad360_probe(struct usb_interface *interface, const struct usb_devic
 	if (!controller)
 		return -ENOMEM;
 	
-	error = xpad360_init_led(usb_dev, controller);
+	error = xpad360_init_led(interface, controller);
 	if (error)
 		goto fail_led_init;
 
@@ -311,11 +322,11 @@ static int xpad360_probe(struct usb_interface *interface, const struct usb_devic
 	if (error)
 		goto fail_input_register;
 	
-	error = xpad360_init_ff(usb_dev, controller);
+	error = xpad360_init_ff(interface, controller);
 	if (error)
 		goto fail_ff_init;
 	
-	error = xpad360_init_in(usb_dev, controller);
+	error = xpad360_init_in(interface, controller);
 	if (error)
 		goto fail_in_init;
 	
