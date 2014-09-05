@@ -160,7 +160,7 @@ static void xpad360_receive(struct urb *urb)
 {
 	struct xpad360_controller *controller = urb->context;
 	u8 *data = urb->transfer_buffer;
-	printk("Message receieved!\n");
+	
 	switch (urb->status) {
 	case 0: 
 		break;
@@ -171,9 +171,7 @@ static void xpad360_receive(struct urb *urb)
 	default:
 		goto finish;
 	}
-	
-	printk("Parsing message!\n");
-	
+		
 	switch(le16_to_cpup((u16*)&data[0])) {
 	case 0x0301: /* LED status */
 		break;
