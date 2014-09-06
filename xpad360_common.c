@@ -57,6 +57,15 @@ int xpad360_setup_transfer_in(
 
 EXPORT_SYMBOL_GPL(xpad360_setup_transfer_in);
 
+void xpad360_free_transfer(struct usb_device *usb_dev, struct xpad360_transfer *transfer)
+{
+	usb_kill_urb(transfer->urb);
+	usb_free_urb(transfer->urb);
+	usb_free_coherent(usb_dev, 32, transfer->buffer, transfer->dma);
+}
+
+EXPORT_SYMBOL_GPL(xpad360_free_transfer);
+
 struct input_dev *xpad360_create_input_dev(
 	struct usb_device *usb_dev,
 	const char *name,
@@ -78,6 +87,19 @@ struct input_dev *xpad360_create_input_dev(
 }
 
 EXPORT_SYMBOL_GPL(xpad360_create_input_dev);
+
+void xpad360_unregister_input_dev(struct input_dev *input_dev)
+{
+	input_unregister_device(input_dev);
+}
+
+void xpad360_free_input_dev(struct input_dev *input_dev) 
+{
+	input_free_device(input_dev);
+}
+
+EXPORT_SYMBOL_GPL(xpad360_unregister_input_dev);
+EXPORT_SYMBOL_GPL(xpad360_free_input_dev);
 
 static int __init xpad360_common_init(void)
 {

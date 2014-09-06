@@ -277,9 +277,9 @@ fail_in_init:
 fail_ff_memless:
 	xpad360_free_transfer(usb_dev, &controller->rumble_out);
 fail_ff_setup:
-	input_unregister_device(controller->input_dev);
+	xpad360_unregister_input_dev(controller->input_dev);
 fail_input_register:
-	input_free_device(controller->input_dev);
+	xpad360_free_input_dev(controller->input_dev);
 fail_input_setup:
 	xpad360_free_transfer(usb_dev, &controller->led_out);
 fail_led_setup:
@@ -298,7 +298,7 @@ static void xpad360_disconnect(struct usb_interface *interface)
 	xpad360_free_transfer(usb_dev, &controller->rumble_out);
 #endif
 	xpad360_free_transfer(usb_dev, &controller->led_out);
-	input_unregister_device(controller->input_dev);
+	xpad360_unregister_input_dev(controller->input_dev);
 	kfree(controller);
 }
 

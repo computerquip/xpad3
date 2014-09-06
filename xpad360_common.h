@@ -70,13 +70,9 @@ static int xpad360_alloc_transfer(struct usb_device *usb_dev, struct xpad360_tra
 	return 0;
 }
 
-inline
-static void xpad360_free_transfer(struct usb_device *usb_dev, struct xpad360_transfer *transfer)
-{
-	usb_kill_urb(transfer->urb);
-	usb_free_urb(transfer->urb);
-	usb_free_coherent(usb_dev, 32, transfer->buffer, transfer->dma);
-}
+void xpad360_free_transfer(struct usb_device *usb_dev, struct xpad360_transfer *transfer);
+void xpad360_unregister_input_dev(struct input_dev *input_dev);
+void xpad360_free_input_dev(struct input_dev *input_dev);
 
 int xpad360_setup_transfer_in(
 	struct usb_interface *usb_intf,
