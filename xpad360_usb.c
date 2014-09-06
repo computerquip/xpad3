@@ -246,7 +246,7 @@ static int xpad360_probe(struct usb_interface *interface, const struct usb_devic
 	/* Rumble transfer setup */
 #ifndef XPAD360_RUMBLE_DISABLED
 	error = xpad360_setup_transfer_out(interface, 
-			&controller->led_out, xpad360_send);
+			&controller->rumble_out, xpad360_send);
 	if (error)
 		goto fail_ff_setup;
 	
