@@ -78,10 +78,14 @@ static void xpad360_free_transfer(struct usb_device *usb_dev, struct xpad360_tra
 	usb_free_coherent(usb_dev, 32, transfer->buffer, transfer->dma);
 }
 
-int xpad360_setup_transfer(
+int xpad360_setup_transfer_in(
 	struct usb_interface *usb_intf,
 	struct xpad360_transfer *transfer,
-	u8 direction,
+	void(*irq)(struct urb*));
+
+int xpad360_setup_transfer_out(
+	struct usb_interface *usb_intf,
+	struct xpad360_transfer *transfer,
 	void(*irq)(struct urb*));
 
 struct input_dev *xpad360_create_input_dev(

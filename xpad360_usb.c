@@ -217,8 +217,8 @@ static int xpad360_probe(struct usb_interface *interface, const struct usb_devic
 	usb_set_intfdata(interface, controller);
 	
 	/* LED */
-	error = xpad360_setup_transfer(interface, 
-			&controller->led_out, USB_DIR_OUT, xpad360_send);
+	error = xpad360_setup_transfer_out(interface, 
+			&controller->led_out, xpad360_send);
 	if (error)
 		goto fail_led_setup;
 	
@@ -245,8 +245,8 @@ static int xpad360_probe(struct usb_interface *interface, const struct usb_devic
 	
 	/* Rumble transfer setup */
 #ifndef XPAD360_RUMBLE_DISABLED
-	error = xpad360_setup_transfer(interface, 
-			&controller->led_out, USB_DIR_OUT, xpad360_send);
+	error = xpad360_setup_transfer_out(interface, 
+			&controller->led_out, xpad360_send);
 	if (error)
 		goto fail_ff_setup;
 	
@@ -259,8 +259,8 @@ static int xpad360_probe(struct usb_interface *interface, const struct usb_devic
 #endif
 	
 	/* In transfer */
-	error = xpad360_setup_transfer(interface, 
-			&controller->in, USB_DIR_IN, xpad360_receive);
+	error = xpad360_setup_transfer_in(interface, 
+			&controller->in, xpad360_receive);
 	
 	if (error)
 		goto fail_in_init;
