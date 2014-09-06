@@ -1,5 +1,7 @@
 #pragma once
 
+#include <linux/workqueue.h>
+
 enum xpad360_led {
 	XPAD360_LED_OFF,
 	XPAD360_LED_ALL_BLINKING,
@@ -75,3 +77,15 @@ static void xpad360_free_transfer(struct usb_device *usb_dev, struct xpad360_tra
 	usb_free_urb(transfer->urb);
 	usb_free_coherent(usb_dev, 32, transfer->buffer, transfer->dma);
 }
+
+int xpad360_setup_transfer(
+	struct usb_interface *usb_intf,
+	struct xpad360_transfer *transfer,
+	u8 direction,
+	void(*irq)(struct urb*));
+
+struct input_dev *xpad360_create_input_dev(
+	struct usb_device *usb_dev,
+	const char *name,
+	int (* open) (struct input_dev *),
+	void (* close) (struct input_dev *));

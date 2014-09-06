@@ -1,7 +1,7 @@
-obj-m := xpad360.o xpad360wr.o
+obj-m := xpad360.o xpad360c.o
 
 xpad360-y  := xpad360_usb.o
-xpad360wr-y := xpad360wr_usb.o
+xpad360c-y := xpad360_common.o
 
 ccflags-y   := -DDEBUG -std=gnu99
 
