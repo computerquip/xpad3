@@ -299,7 +299,7 @@ static void xpad360_disconnect(struct usb_interface *interface)
 #endif
 	xpad360_free_transfer(usb_dev, &controller->led_out);
 	xpad360_unregister_input_dev(controller->input_dev);
-	kfree(controller);
+	/* kfree(controller); */ /* This is oddly freed by ff-memless erroneously if I had to guess... */
 }
 
 static struct usb_driver xpad360_driver = {
