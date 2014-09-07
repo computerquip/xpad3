@@ -85,9 +85,10 @@ struct xpad360_controller {
 };
 
 #ifndef XPAD360_RUMBLE_DISABLED
-static int xpad360_rumble(struct input_dev *dev, void* context, struct ff_effect *effect)
+static int xpad360_rumble(struct input_dev *dev, void* broken_as_fuck, struct ff_effect *effect)
 {
-	struct xpad360_controller *controller = context;
+	
+	struct xpad360_controller *controller = input_get_drvdata(dev);
 
 	if (effect->type == FF_RUMBLE) {
 		u8 left = effect->u.rumble.strong_magnitude / 255;
@@ -243,6 +244,8 @@ static int xpad360_probe(struct usb_interface *interface, const struct usb_devic
 	if (error)
 		goto fail_input_register;
 	
+	input_set_drvdata(controller->input_dev, controller);
+	
 	/* Rumble transfer setup */
 #ifndef XPAD360_RUMBLE_DISABLED
 	error = xpad360_setup_transfer_out(interface, 
@@ -253,7 +256,7 @@ static int xpad360_probe(struct usb_interface *interface, const struct usb_devic
 	controller->rumble_out.urb->transfer_buffer_length = 8; /* Never changes */
 	
 	/* ff-memless setup */
-	error = input_ff_create_memless(controller->input_dev, controller, xpad360_rumble);
+	error = input_ff_create_memless(controller->input_dev, NULL, xpad360_rumble);
 	if (error) 
 		goto fail_ff_memless;
 #endif
@@ -299,7 +302,7 @@ static void xpad360_disconnect(struct usb_interface *interface)
 #endif
 	xpad360_free_transfer(usb_dev, &controller->led_out);
 	xpad360_unregister_input_dev(controller->input_dev);
-	/* kfree(controller); */ /* This is oddly freed by ff-memless erroneously if I had to guess... */
+	kfree(controller);
 }
 
 static struct usb_driver xpad360_driver = {
