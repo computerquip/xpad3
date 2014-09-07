@@ -23,6 +23,12 @@ struct xpad360_transfer {
 	struct urb *urb;
 	u8 *buffer;
 	dma_addr_t dma;
+	u32 counter; /* Used to syncronize input events. */
+};
+
+struct xpad360_work {
+	struct work_struct work;
+	struct xpad360_transfer *transfer;
 };
 
 inline 
@@ -77,12 +83,14 @@ void xpad360_free_input_dev(struct input_dev *input_dev);
 int xpad360_setup_transfer_in(
 	struct usb_interface *usb_intf,
 	struct xpad360_transfer *transfer,
-	void(*irq)(struct urb*));
+	void(*irq)(struct urb*),
+	gfp_t mem_flag);
 
 int xpad360_setup_transfer_out(
 	struct usb_interface *usb_intf,
 	struct xpad360_transfer *transfer,
-	void(*irq)(struct urb*));
+	void(*irq)(struct urb*),
+	gfp_t mem_flag);
 
 struct input_dev *xpad360_create_input_dev(
 	struct usb_device *usb_dev,

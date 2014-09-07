@@ -12,13 +12,13 @@ struct workqueue_struct * xpad360_common_workqueue;
 int xpad360_setup_transfer_out(
 	struct usb_interface *usb_intf,
 	struct xpad360_transfer *transfer,
-	usb_complete_t irq)
+	usb_complete_t irq, gfp_t mem_flag)
 {
 	void * user_data = usb_get_intfdata(usb_intf);
 	struct usb_device *usb_dev = interface_to_usbdev(usb_intf);
 	struct usb_endpoint_descriptor *ep = &usb_intf->cur_altsetting->endpoint[1].desc;
 	const int pipe = usb_sndintpipe(usb_dev, ep->bEndpointAddress); 
-	int error = xpad360_alloc_transfer(usb_dev, transfer, GFP_KERNEL);
+	int error = xpad360_alloc_transfer(usb_dev, transfer, mem_flag);
 	
 	if (error) 
 		return error;
@@ -36,13 +36,13 @@ EXPORT_SYMBOL_GPL(xpad360_setup_transfer_out);
 int xpad360_setup_transfer_in(
 	struct usb_interface *usb_intf,
 	struct xpad360_transfer *transfer,
-	usb_complete_t irq)
+	usb_complete_t irq, gfp_t mem_flag)
 {
 	void * user_data = usb_get_intfdata(usb_intf);
 	struct usb_device *usb_dev = interface_to_usbdev(usb_intf);
 	struct usb_endpoint_descriptor *ep = &usb_intf->cur_altsetting->endpoint[0].desc;
 	const int pipe = usb_rcvintpipe(usb_dev, ep->bEndpointAddress); 
-	int error = xpad360_alloc_transfer(usb_dev, transfer, GFP_KERNEL);
+	int error = xpad360_alloc_transfer(usb_dev, transfer, mem_flag);
 	
 	if (error) 
 		return error;
@@ -100,6 +100,8 @@ void xpad360_free_input_dev(struct input_dev *input_dev)
 
 EXPORT_SYMBOL_GPL(xpad360_unregister_input_dev);
 EXPORT_SYMBOL_GPL(xpad360_free_input_dev);
+
+
 
 static int __init xpad360_common_init(void)
 {
